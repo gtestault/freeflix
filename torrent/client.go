@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 )
 
@@ -56,12 +55,7 @@ func NewClient(cfg ClientConfig) (client Client, err error) {
 	client.Config = cfg
 
 	// Create client.
-	c, err = torrent.NewClient(&torrent.ClientConfig{
-		DataDir:    os.TempDir(),
-		NoUpload:   !cfg.Seed,
-		Seed:       cfg.Seed,
-		DisableTCP: !cfg.TCP,
-	})
+	c, err = torrent.NewClient(nil)
 
 	if err != nil {
 		return client, fmt.Errorf("creating torrent client failed: %v", err)
@@ -102,7 +96,7 @@ func NewClient(cfg ClientConfig) (client Client, err error) {
 }
 
 func (c Client) getLargestFile() *torrent.File {
-	var target torrent.File
+	var target *torrent.File
 	var maxSize int64
 
 	for _, file := range c.Torrent.Files() {
@@ -112,11 +106,12 @@ func (c Client) getLargestFile() *torrent.File {
 		}
 	}
 
-	return &target
+	return target
 }
 
 // GetFile is an http handler to serve the biggest file managed by the client.
 func (c Client) GetFile(w http.ResponseWriter, r *http.Request) {
+	log.Info("movie request received")
 	target := c.getLargestFile()
 	entry, err := NewFileReader(target)
 	if err != nil {
@@ -129,8 +124,9 @@ func (c Client) GetFile(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error closing file reader: %s\n", err)
 		}
 	}()
-
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+c.Torrent.Info().Name+"\"")
+	log.Info(target.DisplayPath())
 	http.ServeContent(w, r, target.DisplayPath(), time.Now(), entry)
 }
 

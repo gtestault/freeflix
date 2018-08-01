@@ -1,6 +1,7 @@
 package main
 
 import (
+	"freeflix/api"
 	log "github.com/sirupsen/logrus"
 	"os"
 )
@@ -12,6 +13,5 @@ func init() {
 }
 
 func main() {
-	//api.StartServer()
-
+	api.StartServer()
 }
