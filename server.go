@@ -1,7 +1,6 @@
 package main
 
 import (
-	"freeflix/torrent/service"
 	log "github.com/sirupsen/logrus"
 	"os"
 )
@@ -13,5 +12,6 @@ func init() {
 }
 
 func main() {
-	service.NewClientYTS().MoviePage(1)
+	//api.StartServer()
+
 }

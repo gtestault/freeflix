@@ -24,19 +24,21 @@ type ytsMoviePage struct {
 }
 
 type YtsMovie struct {
-	Id              int
-	Url             string
-	ImdbCode        string `json:"imdb_code"`
-	Title           string
-	Year            int
-	Rating          float32
-	Runtime         int
-	Genres          []string
-	Summary         string
-	YTCode          string `json:"yt_trailer_code"`
-	Language        string
-	SmallCoverImage string `json:"small_cover_image"`
-	Torrents        []*YtsTorrent
+	Id               int
+	Url              string
+	ImdbCode         string `json:"imdb_code"`
+	Title            string
+	Year             int
+	Rating           float32
+	Runtime          int
+	Genres           []string
+	Summary          string
+	YTCode           string `json:"yt_trailer_code"`
+	Language         string
+	SmallCoverImage  string `json:"small_cover_image"`
+	MediumCoverImage string `json:"medium_cover_image"`
+	LargeCoverImage  string `json:"large_cover_image"`
+	Torrents         []*YtsTorrent
 }
 
 type YtsTorrent struct {
