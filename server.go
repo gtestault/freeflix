@@ -1,17 +1,43 @@
 package main
 
 import (
-	"freeflix/api"
+	"encoding/json"
+	"freeflix/service"
+	"freeflix/torrent"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"os"
 )
 
+var yts *service.Yts
+var client *torrent.Client
+
 func init() {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
-	log.SetFormatter(&log.TextFormatter{})
+	yts = service.NewClientYTS()
+	var err error
+	client, err = torrent.NewClient()
+	if err != nil {
+		log.Fatalf(err.Error())
+		os.Exit(1)
+	}
 }
 
-func main() {
-	api.StartServer()
+func StartServer() {
+	http.HandleFunc("/api/yts", getYtsMovies)
+	http.HandleFunc("/api/movie/watch", client.GetFile)
+	http.HandleFunc("/api/movie/request", client.MovieRequest)
+	log.Debug("Listening on port 8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		panic(err)
+	}
+}
+
+func getYtsMovies(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	err := json.NewEncoder(w).Encode(yts.MoviePage(1))
+	if err != nil {
+		log.WithError(err).Error("encoding YtsPage failed")
+		http.Error(w, ":whale:", http.StatusInternalServerError)
+	}
 }
