@@ -8,6 +8,7 @@
 <h2>active torrents: {{len .Torrents}}</h2>
 <ul>
     {{range $key, $t := .Torrents}}
+        {{if .Fetched}}
         <li>
             <b>{{.String}}</b>
                 <ul>
@@ -18,6 +19,11 @@
                     <li>{{progress .BytesCompleted .BytesMissing}}</li>
                 </ul>
         </li>
+        {{else}}
+        <li>
+            <b>Torrent {{.String}} fetching... </b>
+        </li>
+        {{end}}
     {{end}}
 </ul>
 </body>

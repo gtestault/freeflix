@@ -22,18 +22,19 @@ var trackers = [...]string{
 }
 
 type Client struct {
-	Client         *torrent.Client
-	Torrents       map[string]*torrent.Torrent
-	TorrentFetched map[string]bool
+	Client   *torrent.Client
+	Torrents map[string]*Torrent
 }
 
 type Torrent struct {
+	*torrent.Torrent
+	Fetched bool
 }
 
 func NewClient() (client *Client, err error) {
 	var c *torrent.Client
 	client = &Client{}
-	client.Torrents = make(map[string]*torrent.Torrent)
+	client.Torrents = make(map[string]*Torrent)
 
 	//config
 	torrentCfg := torrent.NewDefaultClientConfig()
@@ -60,13 +61,13 @@ func (c *Client) AddTorrent(infoHash string) (err error) {
 	if err != nil {
 		return fmt.Errorf("adding torrent failed: %v", err)
 	}
-	c.Torrents[infoHash] = t
+	c.Torrents[infoHash] = &Torrent{Torrent: t}
 
 	//wait for fetch to Download torrent
 	go func() {
 		<-t.GotInfo()
 		t.DownloadAll()
-		c.TorrentFetched[infoHash] = true
+		c.Torrents[infoHash].Fetched = true
 	}()
 	return
 }
