@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>freeflix status</title>
+</head>
+<body>
+<h2>active torrents: {{len .Torrents}}</h2>
+<ul>
+    {{range $key, $t := .Torrents}}
+        <li>
+            <b>{{.String}}</b>
+                <ul>
+                    {{with .Stats}}
+                    <li>Peers: {{.ActivePeers}}</li>
+                    <li>Seeders: {{.ConnectedSeeders}}</li>
+                    {{end}}
+                    <li>{{progress .BytesCompleted .BytesMissing}}</li>
+                </ul>
+        </li>
+    {{end}}
+</ul>
+</body>
+</html>

@@ -22,8 +22,12 @@ var trackers = [...]string{
 }
 
 type Client struct {
-	Client   *torrent.Client
-	Torrents map[string]*torrent.Torrent
+	Client         *torrent.Client
+	Torrents       map[string]*torrent.Torrent
+	TorrentFetched map[string]bool
+}
+
+type Torrent struct {
 }
 
 func NewClient() (client *Client, err error) {
@@ -62,6 +66,7 @@ func (c *Client) AddTorrent(infoHash string) (err error) {
 	go func() {
 		<-t.GotInfo()
 		t.DownloadAll()
+		c.TorrentFetched[infoHash] = true
 	}()
 	return
 }
@@ -128,7 +133,7 @@ func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
 func infoHashFromRequest(r *http.Request) (string, error) {
 	packed, ok := r.URL.Query()["infoHash"]
 	if !ok || len(packed) < 1 {
-		return "", fmt.Errorf("no infoHash in Query")
+		return "", fmt.Errorf("infoHashFromRequest: no infoHash in Request")
 	}
 	return packed[0], nil
 }

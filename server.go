@@ -26,6 +26,8 @@ func StartServer() {
 	http.HandleFunc("/api/yts", getYtsMovies)
 	http.HandleFunc("/api/movie/watch", client.GetFile)
 	http.HandleFunc("/api/movie/request", client.MovieRequest)
+	//TODO: Acess Control
+	http.HandleFunc("/monitoring/status", client.Status)
 	log.Debug("Listening on port 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
