@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-//modified MIT licensed code from https://github.com/Sioro-Neoku/go-peerflix/blob/master/client.go
-
 var trackers = [...]string{
 	"udp://open.demonii.com:1337/announce",
 	"udp://tracker.openbittorrent.com:80",
@@ -24,95 +22,99 @@ var trackers = [...]string{
 }
 
 type Client struct {
-	Client  *torrent.Client
-	Torrent *torrent.Torrent
-	Config  ClientConfig
+	Client   *torrent.Client
+	Torrents map[string]*Torrent
 }
 
-type ClientConfig struct {
-	TorrentPort    int
-	TorrentPath    string
-	Seed           bool
-	TCP            bool
-	MaxConnections int
+type Torrent struct {
+	*torrent.Torrent
+	Fetched bool
 }
 
-// NewClientConfig creates a new default configuration.
-func NewClientConfig() ClientConfig {
-	return ClientConfig{
-		Seed:           false,
-		TCP:            true,
-		MaxConnections: 200,
-	}
-}
-
-// NewClient creates a new torrent client based on a magnet or a torrent file.
-// If the torrent file is on http, we try downloading it.
-func NewClient(cfg ClientConfig) (client Client, err error) {
-	var t *torrent.Torrent
+func NewClient() (client *Client, err error) {
 	var c *torrent.Client
+	client = &Client{}
+	client.Torrents = make(map[string]*Torrent)
 
-	client.Config = cfg
+	//config
+	torrentCfg := torrent.NewDefaultClientConfig()
+	torrentCfg.Seed = false
+	torrentCfg.DataDir = "./Movies"
 
 	// Create client.
-	c, err = torrent.NewClient(nil)
-
+	c, err = torrent.NewClient(torrentCfg)
 	if err != nil {
 		return client, fmt.Errorf("creating torrent client failed: %v", err)
 	}
-
 	client.Client = c
+	return
+}
 
-	// Add torrent.
-
-	// Add as magnet url.
-	if t, err = c.AddMagnet(cfg.TorrentPath); err != nil {
-		return client, fmt.Errorf("adding torrent failed: %v", err)
+//Adds Torrent to the client. If the torrent is already added returns without error.
+func (c *Client) AddTorrent(infoHash string) (err error) {
+	//if torrent already registered in client return
+	if _, ok := c.Torrents[infoHash]; ok {
+		return nil
 	}
-	//// Add torrent file
-	//
-	//// If it's online, we try downloading the file.
-	//		if isHTTP.MatchString(cfg.TorrentPath) {
-	//			if cfg.TorrentPath, err = downloadFile(cfg.TorrentPath); err != nil {
-	//				return client, ClientError{Type: "downloading torrent file", Origin: err}
-	//			}
-	//		}
-	//
-	//		if t, err = c.AddTorrentFromFile(cfg.TorrentPath); err != nil {
-	//			return client, ClientError{Type: "adding torrent to the client", Origin: err}
-	//		}
 
-	client.Torrent = t
-	client.Torrent.SetMaxEstablishedConns(cfg.MaxConnections)
+	t, err := c.Client.AddMagnet(BuildMagnet(infoHash, infoHash))
+	if err != nil {
+		return fmt.Errorf("adding torrent failed: %v", err)
+	}
+	c.Torrents[infoHash] = &Torrent{Torrent: t}
 
+	//wait for fetch to Download torrent
 	go func() {
 		<-t.GotInfo()
 		t.DownloadAll()
-
-		// Prioritize first 5% of the file.
-		client.getLargestFile().Torrent().DownloadPieces(0, t.NumPieces()/100*5)
+		c.Torrents[infoHash].Fetched = true
 	}()
 	return
 }
 
-func (c Client) getLargestFile() *torrent.File {
+func (c *Client) getLargestFile(infoHash string) (*torrent.File, error) {
 	var target *torrent.File
 	var maxSize int64
-
-	for _, file := range c.Torrent.Files() {
+	t, ok := c.Torrents[infoHash]
+	if !ok {
+		return nil, fmt.Errorf("error: unregistered infoHash")
+	}
+	for _, file := range t.Files() {
 		if maxSize < file.Length() {
 			maxSize = file.Length()
 			target = file
 		}
 	}
+	return target, nil
+}
 
-	return target
+func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
+	infoHash, err := infoHashFromRequest(r)
+	if err != nil {
+		log.WithField("infoHash", infoHash).Warn("MovieRequest: Request without InfoHash")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	log.WithField("infoHash", infoHash).Debug("torrent request received")
+	if err = c.AddTorrent(infoHash); err != nil {
+		log.WithField("infoHash", infoHash).Error("MovieRequest adding torrent: %v", err)
+	}
 }
 
 // GetFile is an http handler to serve the biggest file managed by the client.
-func (c Client) GetFile(w http.ResponseWriter, r *http.Request) {
-	log.Info("movie request received")
-	target := c.getLargestFile()
+func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
+	infoHash, err := infoHashFromRequest(r)
+	if err != nil {
+		log.WithField("infoHash", infoHash).Warn("GetFile: Request without InfoHash")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	log.WithField("infoHash", infoHash).Debug("movie file request received")
+
+	target, err := c.getLargestFile(infoHash)
+	if err != nil {
+		log.WithField("infoHash", infoHash).WithError(err).Errorf("server: error getting file")
+	}
 	entry, err := NewFileReader(target)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,9 +127,16 @@ func (c Client) GetFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+c.Torrent.Info().Name+"\"")
 	log.Info(target.DisplayPath())
 	http.ServeContent(w, r, target.DisplayPath(), time.Now(), entry)
+}
+
+func infoHashFromRequest(r *http.Request) (string, error) {
+	packed, ok := r.URL.Query()["infoHash"]
+	if !ok || len(packed) < 1 {
+		return "", fmt.Errorf("infoHashFromRequest: no infoHash in Request")
+	}
+	return packed[0], nil
 }
 
 func BuildMagnet(infoHash string, title string) string {
