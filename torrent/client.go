@@ -89,6 +89,7 @@ func (c *Client) getLargestFile(infoHash string) (*torrent.File, error) {
 }
 
 func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	infoHash, err := infoHashFromRequest(r)
 	if err != nil {
 		log.WithField("infoHash", infoHash).Warn("MovieRequest: Request without InfoHash")
@@ -98,7 +99,18 @@ func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 	log.WithField("infoHash", infoHash).Debug("torrent request received")
 	if err = c.AddTorrent(infoHash); err != nil {
 		log.WithField("infoHash", infoHash).Error("MovieRequest adding torrent: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
+
+	//allow polling for state of torrent
+	//torrent fetched --> HTTP 202 Accepted
+	//torrent fetched --> HTTP 200 OK => Client can continue polling state
+	if c.Torrents[infoHash].Fetched {
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // GetFile is an http handler to serve the biggest file managed by the client.
@@ -127,7 +139,6 @@ func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	log.Info(target.DisplayPath())
 	http.ServeContent(w, r, target.DisplayPath(), time.Now(), entry)
 }
 

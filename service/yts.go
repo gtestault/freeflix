@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 const (
@@ -54,14 +53,23 @@ func NewClientYTS() *Yts {
 	return &Yts{}
 }
 
-func (Yts) MoviePage(page int) []*YtsMovie {
+func (Yts) MoviePage(page string, query string, rating string) []*YtsMovie {
 	v := url.Values{}
-	v.Add("page", strconv.Itoa(page))
+	if page != "" {
+		v.Add("page", page)
+	}
+	if query != "" {
+		v.Add("query_term", query)
+	}
+	if rating != "" {
+		v.Add("minimum_rating", rating)
+	}
 	reqURL := endpointYTS + listMoviesYTS + v.Encode()
 	res, err := http.Get(reqURL)
 	log.WithField("req", reqURL).Debug("Page Request to YTS")
 	if err != nil {
 		log.Error(err)
+		return nil
 	}
 
 	dec := json.NewDecoder(res.Body)
