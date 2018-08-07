@@ -113,6 +113,19 @@ func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	infoHash, err := infoHashFromRequest(r)
+	if err != nil {
+		log.WithField("infoHash", infoHash).Warn("MovieDelete: Request without InfoHash")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	log.WithField("infoHash", infoHash).Debug("movie delete request received")
+	c.Torrents[infoHash].Torrent.Drop()
+	//TODO: delete movie from fs
+}
+
 // GetFile is an http handler to serve the biggest file managed by the client.
 func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
 	infoHash, err := infoHashFromRequest(r)
