@@ -33,6 +33,13 @@ func StartServer() {
 	r.HandleFunc("/api/movie/delete", client.MovieDelete)
 	//TODO: Access Control
 	r.HandleFunc("/monitoring/status", client.Status)
+	r.PathPrefix("/assets/").Handler(http.FileServer(http.Dir("./public/freeflix")))
+	r.PathPrefix("/dist").Handler(http.FileServer(http.Dir("./public/freeflix")))
+
+	//redirect unmatched paths for processing by the angular router
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./public/freeflix/index.html")
+	})
 	log.Debug("Listening on port 8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		panic(err)
