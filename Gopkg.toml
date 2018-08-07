@@ -29,10 +29,10 @@
   branch = "master"
   name = "github.com/anacrolix/torrent"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/dustin/go-humanize"
-
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.6.2"

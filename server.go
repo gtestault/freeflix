@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"freeflix/service"
 	"freeflix/torrent"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -25,14 +26,15 @@ func init() {
 }
 
 func StartServer() {
-	http.HandleFunc("/api/yts", getYtsMovies)
-	http.HandleFunc("/api/movie/watch", client.GetFile)
-	http.HandleFunc("/api/movie/request", client.MovieRequest)
-	http.HandleFunc("/api/movie/delete", client.MovieDelete)
+	r := mux.NewRouter()
+	r.HandleFunc("/api/yts", getYtsMovies)
+	r.HandleFunc("/api/movie/watch", client.GetFile)
+	r.HandleFunc("/api/movie/request", client.MovieRequest)
+	r.HandleFunc("/api/movie/delete", client.MovieDelete)
 	//TODO: Access Control
-	http.HandleFunc("/monitoring/status", client.Status)
+	r.HandleFunc("/monitoring/status", client.Status)
 	log.Debug("Listening on port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		panic(err)
 	}
 }

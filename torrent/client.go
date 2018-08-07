@@ -123,6 +123,7 @@ func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	log.WithField("infoHash", infoHash).Debug("movie delete request received")
 	c.Torrents[infoHash].Torrent.Drop()
+	delete(c.Torrents, infoHash)
 	//TODO: delete movie from fs
 }
 
