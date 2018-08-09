@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/anacrolix/torrent"
 	log "github.com/sirupsen/logrus"
@@ -29,6 +30,13 @@ type Client struct {
 type Torrent struct {
 	*torrent.Torrent
 	Fetched bool
+}
+
+type Status struct {
+	Name            string
+	InfoHash        string
+	BytesDownloaded int64
+	BytesMissing    int64
 }
 
 func NewClient() (client *Client, err error) {
@@ -89,7 +97,6 @@ func (c *Client) getLargestFile(infoHash string) (*torrent.File, error) {
 }
 
 func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	infoHash, err := infoHashFromRequest(r)
 	if err != nil {
 		log.WithField("infoHash", infoHash).Warn("MovieRequest: Request without InfoHash")
@@ -114,7 +121,6 @@ func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	infoHash, err := infoHashFromRequest(r)
 	if err != nil {
 		log.WithField("infoHash", infoHash).Warn("MovieDelete: Request without InfoHash")
@@ -122,9 +128,30 @@ func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.WithField("infoHash", infoHash).Debug("movie delete request received")
+	if c.Torrents[infoHash] == nil {
+		log.Warn("MovieDelete: tried to delete non-existent: %s", r.URL.String())
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	c.Torrents[infoHash].Torrent.Drop()
 	delete(c.Torrents, infoHash)
 	//TODO: delete movie from fs
+}
+
+func (c *Client) TorrentStatus(w http.ResponseWriter, r *http.Request) {
+	stats := make([]Status, 0, 8)
+	for _, t := range c.Torrents {
+		stats = append(stats, Status{
+			Name:            t.Name(),
+			InfoHash:        t.InfoHash().String(),
+			BytesDownloaded: t.BytesCompleted(),
+			BytesMissing:    t.BytesMissing(),
+		})
+	}
+	err := json.NewEncoder(w).Encode(stats)
+	if err != nil {
+		log.Errorf("TorrentStatus encoding torrent status failed")
+	}
 }
 
 // GetFile is an http handler to serve the biggest file managed by the client.
@@ -140,6 +167,8 @@ func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
 	target, err := c.getLargestFile(infoHash)
 	if err != nil {
 		log.WithField("infoHash", infoHash).WithError(err).Errorf("server: error getting file")
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 	entry, err := NewFileReader(target)
 	if err != nil {
@@ -152,7 +181,6 @@ func (c *Client) GetFile(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error closing file reader: %s\n", err)
 		}
 	}()
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeContent(w, r, target.DisplayPath(), time.Now(), entry)
 }
 

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"freeflix/service"
 	"freeflix/torrent"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 var yts *service.Yts
@@ -27,13 +27,17 @@ func init() {
 
 func StartServer() {
 	r := mux.NewRouter()
-	r.HandleFunc("/api/yts", getYtsMovies)
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS", "DELETE"})
+	r.HandleFunc("/api/yts", getYtsMovies).Methods("GET")
 	r.HandleFunc("/api/movie/watch", client.GetFile)
-	r.HandleFunc("/api/movie/request", client.MovieRequest)
-	r.HandleFunc("/api/movie/delete", client.MovieDelete)
+	r.HandleFunc("/api/movie/request", client.MovieRequest).Methods("GET")
+	r.HandleFunc("/api/movie/status", client.TorrentStatus)
+	r.HandleFunc("/api/movie/delete", client.MovieDelete).Methods("DELETE")
 	//TODO: Access Control
 	r.HandleFunc("/monitoring/status", client.Status)
-	r.PathPrefix("/assets/").Handler(http.FileServer(http.Dir("./public/freeflix")))
+	r.PathPrefix("/assets").Handler(http.FileServer(http.Dir("./public/freeflix")))
 	r.PathPrefix("/dist").Handler(http.FileServer(http.Dir("./public/freeflix")))
 
 	//redirect unmatched paths for processing by the angular router
@@ -41,14 +45,13 @@ func StartServer() {
 		http.ServeFile(w, r, "./public/freeflix/index.html")
 	})
 	log.Debug("Listening on port 8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	if err := http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(r)); err != nil {
 		panic(err)
 	}
 }
 
 func getYtsMovies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	//query is search term for movies
 	query, err := getParam(r, "query")
 	//rating is minimum imdb
@@ -68,12 +71,4 @@ func getParam(r *http.Request, param string) (string, error) {
 		return "", fmt.Errorf("getParam(%s): no infoHash in Request", param)
 	}
 	return packed[0], nil
-}
-
-func validateInt(a string, min, max int) (int, error) {
-	i, err := strconv.Atoi(a)
-	if err != nil || i < min || i > max {
-		return 0, fmt.Errorf("validateInt: invalid")
-	}
-	return i, nil
 }
