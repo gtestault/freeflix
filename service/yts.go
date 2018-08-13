@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
@@ -53,7 +54,7 @@ func NewClientYTS() *Yts {
 	return &Yts{}
 }
 
-func (Yts) MoviePage(page string, query string, rating string) []*YtsMovie {
+func (Yts) MoviePage(page string, query string, rating string) ([]*YtsMovie, error) {
 	v := url.Values{}
 	if page != "" {
 		v.Add("page", page)
@@ -69,7 +70,7 @@ func (Yts) MoviePage(page string, query string, rating string) []*YtsMovie {
 	log.WithField("req", reqURL).Debug("Page Request to YTS")
 	if err != nil {
 		log.Error(err)
-		return nil
+		return nil, err
 	}
 
 	dec := json.NewDecoder(res.Body)
@@ -82,7 +83,7 @@ func (Yts) MoviePage(page string, query string, rating string) []*YtsMovie {
 	var response ytsMoviePage
 	err = dec.Decode(&response)
 	if err != nil {
-		log.WithError(err).Error("error decoding json YTS response: ")
+		return nil, fmt.Errorf("MoviePage: error decoding json YTS response: %v", err)
 	}
-	return response.Data.Movies
+	return response.Data.Movies, nil
 }

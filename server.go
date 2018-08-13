@@ -58,7 +58,12 @@ func getYtsMovies(w http.ResponseWriter, r *http.Request) {
 	rating, err := getParam(r, "rating")
 	page, err := getParam(r, "page")
 
-	err = json.NewEncoder(w).Encode(yts.MoviePage(page, query, rating))
+	moviePage, err := yts.MoviePage(page, query, rating)
+	if err != nil {
+		http.Error(w, "yts service offline", http.StatusServiceUnavailable)
+		log.Error(err)
+	}
+	err = json.NewEncoder(w).Encode(moviePage)
 	if err != nil {
 		log.WithError(err).Error("encoding YtsPage failed")
 		http.Error(w, ":whale:", http.StatusInternalServerError)

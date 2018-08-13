@@ -141,6 +141,9 @@ func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
 func (c *Client) TorrentStatus(w http.ResponseWriter, r *http.Request) {
 	stats := make([]Status, 0, 8)
 	for _, t := range c.Torrents {
+		if !t.Fetched {
+			continue
+		}
 		stats = append(stats, Status{
 			Name:            t.Name(),
 			InfoHash:        t.InfoHash().String(),
