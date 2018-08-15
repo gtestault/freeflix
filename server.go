@@ -57,8 +57,10 @@ func getYtsMovies(w http.ResponseWriter, r *http.Request) {
 	//rating is minimum imdb
 	rating, err := getParam(r, "rating")
 	page, err := getParam(r, "page")
+	sortBy, err := getParam(r, "sort_by")
+	orderBy, err := getParam(r, "order_by")
 
-	moviePage, err := yts.MoviePage(page, query, rating)
+	moviePage, err := yts.MoviePage(page, query, rating, sortBy, orderBy)
 	if err != nil {
 		http.Error(w, "yts service offline", http.StatusServiceUnavailable)
 		log.Error(err)

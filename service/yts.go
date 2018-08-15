@@ -54,7 +54,7 @@ func NewClientYTS() *Yts {
 	return &Yts{}
 }
 
-func (Yts) MoviePage(page string, query string, rating string) ([]*YtsMovie, error) {
+func (Yts) MoviePage(page, query, rating, sortBy, orderBy string) ([]*YtsMovie, error) {
 	v := url.Values{}
 	if page != "" {
 		v.Add("page", page)
@@ -64,6 +64,12 @@ func (Yts) MoviePage(page string, query string, rating string) ([]*YtsMovie, err
 	}
 	if rating != "" {
 		v.Add("minimum_rating", rating)
+	}
+	if sortBy != "" {
+		v.Add("sort_by", sortBy)
+	}
+	if orderBy != "" {
+		v.Add("order_by", orderBy)
 	}
 	reqURL := endpointYTS + listMoviesYTS + v.Encode()
 	res, err := http.Get(reqURL)
