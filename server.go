@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"freeflix/service"
@@ -8,6 +9,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
@@ -25,6 +27,43 @@ func init() {
 	}
 }
 
+type hookedResponseWriter struct {
+	http.ResponseWriter
+	ignore bool
+}
+
+func (hrw *hookedResponseWriter) WriteHeader(status int) {
+	if status == 404 {
+		hrw.ignore = true
+		indexFile, err := ioutil.ReadFile("./public/index.html")
+		if err != nil {
+			log.Error("HookedResponseWriter: couldn't read index.html %v", err)
+		}
+		b := bytes.NewBuffer(indexFile)
+		hrw.ResponseWriter.Header().Set("Content-type", "text/html")
+		hrw.ResponseWriter.WriteHeader(http.StatusOK)
+		if _, err := b.WriteTo(hrw.ResponseWriter); err != nil {
+			log.Error("HookedResponseWriter: couldn't send index.html to client %v", err)
+		}
+	}
+	hrw.ResponseWriter.WriteHeader(status)
+}
+
+func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
+	if hrw.ignore {
+		return len(p), nil
+	}
+	return hrw.ResponseWriter.Write(p)
+}
+
+type NotFoundHook struct {
+	h http.Handler
+}
+
+func (nfh NotFoundHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	nfh.h.ServeHTTP(&hookedResponseWriter{ResponseWriter: w}, r)
+}
+
 func StartServer() {
 	r := mux.NewRouter()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
@@ -37,13 +76,7 @@ func StartServer() {
 	r.HandleFunc("/api/movie/delete", client.MovieDelete).Methods("DELETE")
 	//TODO: Access Control
 	r.HandleFunc("/monitoring/status", client.Status)
-	r.PathPrefix("/assets").Handler(http.FileServer(http.Dir("./public/freeflix")))
-	r.PathPrefix("/dist").Handler(http.FileServer(http.Dir("./public/freeflix")))
-
-	//redirect unmatched paths for processing by the angular router
-	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./public/freeflix/index.html")
-	})
+	r.PathPrefix("/").Handler(NotFoundHook{http.FileServer(http.Dir("./public/"))})
 	log.Debug("Listening on port 8080")
 	if err := http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(r)); err != nil {
 		panic(err)
