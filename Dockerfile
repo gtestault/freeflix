@@ -8,5 +8,6 @@ RUN apt-get update &&\
     go install -i -v
 WORKDIR $GOPATH/bin
 RUN mkdir -p ./torrent/templates &&\
-    cp ./../src/freeflix/torrent/templates/status.html ./torrent/templates/status.html
+    cp ./../src/freeflix/torrent/templates/status.html ./torrent/templates/status.html &&\
+    tar -xvf frontend.tar
 CMD ["freeflix"]
