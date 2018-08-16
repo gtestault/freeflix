@@ -27,6 +27,8 @@ func init() {
 	}
 }
 
+//The hookedResponseWriter hijacks the behavior of the file server if it tries to return 404
+//we serve the index file instead so that the angular router handles routing.
 type hookedResponseWriter struct {
 	http.ResponseWriter
 	ignore bool
