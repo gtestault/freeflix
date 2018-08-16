@@ -1,5 +1,9 @@
+### Project
+
+Streaming server with an integrated BitTorrent client. The server can stream over http while downloading a torrent. 
+
 ### Start with Docker
-clone the repo and inside the source folder build the docker image
+clone the repo and inside the source folder build the docker image.
 
 ```
 git clone git@github.com:ninjaintrouble/freeflix.git
