@@ -1,4 +1,5 @@
 ### Project
+[![Go Report Card](https://goreportcard.com/badge/github.com/ninjaintrouble/freeflix)](https://goreportcard.com/report/github.com/ninjaintrouble/freeflix)
 
 Streaming server with an integrated BitTorrent client. The server can stream over http while downloading a torrent. 
 

@@ -13,7 +13,7 @@ const (
 	listMoviesYTS = "list_movies.json?"
 )
 
-//YTS service from website https://yts.am/
+//Yts service from website https://yts.am/
 type Yts struct {
 }
 
@@ -24,7 +24,7 @@ type ytsMoviePage struct {
 	}
 }
 
-//A Movie Object returned from the YTS API.
+//YtsMovie stores a Movie Object returned from the YTS API.
 type YtsMovie struct {
 	Id               int
 	Url              string
@@ -43,7 +43,7 @@ type YtsMovie struct {
 	Torrents         []*YtsTorrent
 }
 
-//Torrent information of a specific YTS movie
+//YtsTorrent stores torrent information of a specific YTS movie.
 type YtsTorrent struct {
 	Url     string
 	Hash    string
@@ -53,12 +53,12 @@ type YtsTorrent struct {
 	Size    string
 }
 
-//Create a new YTS Service instance.
+//NewClientYTS creates a new YTS Service instance.
 func NewClientYTS() *Yts {
 	return &Yts{}
 }
 
-//Get a page of movies from the YTS API
+//MoviePage gets a page of movies from the YTS API.
 func (Yts) MoviePage(page, query, rating, sortBy, orderBy string) ([]*YtsMovie, error) {
 	v := url.Values{}
 	if page != "" {
