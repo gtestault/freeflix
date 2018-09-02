@@ -90,12 +90,12 @@ func StartServer() {
 func getYtsMovies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	//query is search term for movies
-	query, err := getParam(r, "query")
+	query, _ := getParam(r, "query")
 	//rating is minimum imdb
-	rating, err := getParam(r, "rating")
-	page, err := getParam(r, "page")
-	sortBy, err := getParam(r, "sort_by")
-	orderBy, err := getParam(r, "order_by")
+	rating, _ := getParam(r, "rating")
+	page, _ := getParam(r, "page")
+	sortBy, _ := getParam(r, "sort_by")
+	orderBy, _ := getParam(r, "order_by")
 
 	moviePage, err := yts.MoviePage(page, query, rating, sortBy, orderBy)
 	if err != nil {
