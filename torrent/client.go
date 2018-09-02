@@ -22,16 +22,19 @@ var trackers = [...]string{
 	"udp://tracker.leechers-paradise.org:6969",
 }
 
+//Client stores active Torrents and a reference to the BitTorrent client.
 type Client struct {
 	Client   *torrent.Client
 	Torrents map[string]*Torrent
 }
 
+//Torrent stores general information about a torrent with flag indicating information and torrent availability.
 type Torrent struct {
 	*torrent.Torrent
 	Fetched bool
 }
 
+//Status stores Information about the download progress of a torrent.
 type Status struct {
 	Name            string
 	InfoHash        string
@@ -39,6 +42,7 @@ type Status struct {
 	BytesMissing    int64
 }
 
+//NewClient creates a new BitTorrent client.
 func NewClient() (client *Client, err error) {
 	var c *torrent.Client
 	client = &Client{}
@@ -58,7 +62,7 @@ func NewClient() (client *Client, err error) {
 	return
 }
 
-//Adds Torrent to the client. If the torrent is already added returns without error.
+//AddTorrent adds Torrent to the client. If the torrent is already added returns without error.
 func (c *Client) AddTorrent(infoHash string) (err error) {
 	//if torrent already registered in client return
 	if _, ok := c.Torrents[infoHash]; ok {
@@ -96,6 +100,7 @@ func (c *Client) getLargestFile(infoHash string) (*torrent.File, error) {
 	return target, nil
 }
 
+//MovieRequest adds a torrent identified by an info hash to the BitTorrent Client.
 func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 	infoHash, err := infoHashFromRequest(r)
 	if err != nil {
@@ -112,7 +117,7 @@ func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 
 	//allow polling for state of torrent
 	//torrent fetched --> HTTP 202 Accepted
-	//torrent fetched --> HTTP 200 OK => Client can continue polling state
+	//torrent not yet fetched --> HTTP 200 OK => Client should continue polling state.
 	if c.Torrents[infoHash].Fetched {
 		w.WriteHeader(http.StatusAccepted)
 		return
@@ -120,6 +125,7 @@ func (c *Client) MovieRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+//MovieDelete deletes a torrent identified by an info hash from the BitTorrent Client.
 func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
 	infoHash, err := infoHashFromRequest(r)
 	if err != nil {
@@ -138,6 +144,7 @@ func (c *Client) MovieDelete(w http.ResponseWriter, r *http.Request) {
 	//TODO: delete movie from fs
 }
 
+//TorrentStatus returns download progress information about all active torrents.
 func (c *Client) TorrentStatus(w http.ResponseWriter, r *http.Request) {
 	stats := make([]Status, 0, 8)
 	for _, t := range c.Torrents {
@@ -195,6 +202,7 @@ func infoHashFromRequest(r *http.Request) (string, error) {
 	return packed[0], nil
 }
 
+//BuildMagnet builds a magnet link from an info hash and a static list of trackers.
 func BuildMagnet(infoHash string, title string) string {
 	b := &bytes.Buffer{}
 	b.WriteString("magnet:?xt=urn:btih:")

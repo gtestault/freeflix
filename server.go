@@ -27,7 +27,7 @@ func init() {
 	}
 }
 
-//The hookedResponseWriter hijacks the behavior of the file server if it tries to return 404
+//hookedResponseWriter hijacks the behavior of the file server if it tries to return 404
 //we serve the index file instead so that the angular router handles routing.
 type hookedResponseWriter struct {
 	http.ResponseWriter
@@ -58,6 +58,7 @@ func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
 	return hrw.ResponseWriter.Write(p)
 }
 
+//NotFoundHook is a special HTTP handler using a hooked ResponseWriter instead of the default ResponseWriter.
 type NotFoundHook struct {
 	h http.Handler
 }
@@ -66,6 +67,7 @@ func (nfh NotFoundHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	nfh.h.ServeHTTP(&hookedResponseWriter{ResponseWriter: w}, r)
 }
 
+//StartServer starts the freeflix Server. Serving static content and API.
 func StartServer() {
 	r := mux.NewRouter()
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})

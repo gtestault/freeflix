@@ -22,6 +22,7 @@ func init() {
 			ParseFiles(fp))
 }
 
+//Status serves a html with an overview of all active torrents.
 func (c *Client) Status(w http.ResponseWriter, r *http.Request) {
 	if err := statusTemplate.Execute(w, c); err != nil {
 		log.Error(fmt.Errorf("error while displaying status: %v", err))
