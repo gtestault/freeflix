@@ -7,7 +7,7 @@ Streaming server with an integrated BitTorrent client. The server can stream ove
 clone the repo and inside the source folder build the docker image.
 
 ```
-git clone git@github.com:ninjaintrouble/freeflix.git
+git clone git@github.com:gtestault/freeflix.git
 cd freeflix
 docker build -t freeflix .
 ```
