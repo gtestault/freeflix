@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 const (
@@ -15,6 +16,15 @@ const (
 
 //Yts service from website https://yts.am/
 type Yts struct {
+}
+
+func getYtsEndpoint() string {
+	e := os.Getenv("YTS_ENDPOINT")
+	if len(e) > 0 {
+		return e
+	}
+
+	return endpointYTS
 }
 
 type ytsMoviePage struct {
@@ -76,7 +86,7 @@ func (Yts) MoviePage(page, query, rating, sortBy, orderBy string) ([]*YtsMovie, 
 	if orderBy != "" {
 		v.Add("order_by", orderBy)
 	}
-	reqURL := endpointYTS + listMoviesYTS + v.Encode()
+	reqURL := getYtsEndpoint() + listMoviesYTS + v.Encode()
 	res, err := http.Get(reqURL)
 	log.WithField("req", reqURL).Debug("Page Request to YTS")
 	if err != nil {
